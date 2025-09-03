@@ -3,6 +3,7 @@ from langchain.schema import HumanMessage
 from dotenv import load_dotenv
 import os
 
+
 load_dotenv()
 
 api_key = os.getenv("OPENROUTER_API_KEY")
@@ -10,7 +11,7 @@ api_key = os.getenv("OPENROUTER_API_KEY")
 chat_model = ChatOpenAI(
     openai_api_key=api_key,
     openai_api_base="https://openrouter.ai/api/v1",
-    model="qwen/qwen3-coder:free",  # or any supported model
+    model="deepseek/deepseek-r1-0528:free",  # or any supported model
 )
 
 template = """You are a helpful assistant that follows the user's instructions."""
