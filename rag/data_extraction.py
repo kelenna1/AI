@@ -85,20 +85,20 @@ def create_vectorstore(chunks, embedding_function, file_name, vector_store_path=
     )
     return vectorstore
 
-vectorestore = create_vectorstore(
+vectorstore = create_vectorstore(
     chunks= chunk,
     embedding_function= embedding_function,
     vector_store_path= "vectorstore_chroma",
     file_name=os.path.splitext(os.path.basename("data/dang.pdf"))[0])
 
 #load database
-vectorestore = Chroma(
+vectorstore = Chroma(
     collection_name=clean_filename(os.path.splitext(os.path.basename("data/dang.pdf"))[0]),
     persist_directory="vectorstore_chroma",
     embedding_function=embedding_function,
 )
 
-retriever = vectorestore.as_retriever(search_type="similarity") 
+retriever = vectorstore.as_retriever(search_type="similarity") 
 relevant_chunks= retriever.invoke("What is the main topic of the document?")
 
 
@@ -122,11 +122,19 @@ context_text= "\n\n---\n\n".join([doc.page_content for doc in relevant_chunks])
 prompt_template= ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
 prompt= prompt_template.format_prompt(
     context=context_text,
-    question="What is the main topic of the document?"
+    question= "What is the main topic of the document?"
 )
 
 def format_docs(docs):
     return "\n\n---\n\n".join([doc.page_content for doc in docs])
+
+# Define structured output model
+class ExtractedInfo(BaseModel):
+    paper_title: str = Field(..., description="The title of the paper")
+    paper_summary: str = Field(..., description="A brief summary of the paper")
+    key_findings: str = Field(..., description="Key findings from the paper")
+    sources_used: list[str] = Field(..., description="List of sources referenced")
+
 
 rag_chain = (
     {
@@ -134,9 +142,17 @@ rag_chain = (
         "question": RunnableLambda(lambda x: x["question"])
     }
     | prompt_template
-    | chat_model
+    | chat_model.with_structured_output(ExtractedInfo, strict=True)
 )
 
 # Test the chain
-response = rag_chain.invoke({"question": "so how useful is AI"})
-print(response.content)
+# response = rag_chain.invoke({"question": "give me the summary title and key findings of the document"})
+# print(response)
+
+#Transform response into a dataframe
+structured_response = rag_chain.invoke({"question": "give me the summary title and key findings of the document"})
+df = pd.DataFrame([structured_response.model_dump()])
+print(df)
+
+
+
